@@ -1,0 +1,28 @@
+import Foundation
+
+let kSubsystem = "dev.valerii.kvmbar"
+let kBundleID = "dev.valerii.kvmbar"
+let kCommandNotification = "dev.valerii.kvmbar.command"
+let kSettingsChangedNotification = Notification.Name("dev.valerii.kvmbar.settingsChanged")
+
+/// VCP feature code for input select (DDC/CI).
+let kVCPInputSelect: UInt8 = 0x60
+
+/// Dell vendor VCP code: KVM USB handoff. On the U2725QE, writing the target
+/// input's code (e.g. 0x11 for HDMI) hands the USB hub/peripherals to that
+/// input's computer. One-way: firmware accepts it only from the current USB
+/// owner. Verified live on U2725QE (standard 0x60 is ACKed but ignored there).
+let kVCPDellKVMUSB: UInt8 = 0xE8
+
+var isBundledApp: Bool {
+    Bundle.main.bundleIdentifier == kBundleID && Bundle.main.bundlePath.hasSuffix(".app")
+}
+
+// MARK: - About
+
+let kAppVersion = "1.0"
+let kAuthorName = "Valerii Bakalenko"
+let kAuthorEmail = "valeriy.bakalenko@gmail.com"
+let kAuthorLinkedInURLString = "https://www.linkedin.com/in/valerii-bakalenko/"
+/// The About window shows a GitHub link automatically when this is non-nil.
+let kProjectURLString: String? = "https://github.com/wishval/KVMBar"
