@@ -18,6 +18,8 @@ enum CLI {
       KVMBar --switch-input <v>     DDC-switch monitor input
                                     <v> = DDC code (17, 27, …), a configured
                                     input name, "mine" or "other"
+                                    switching to the other input runs the full
+                                    give-away (see giveAwayOnSwitchToOther)
       KVMBar --give-away            switch to the other input, then soft-disconnect
       KVMBar --disconnect           soft-disconnect the external display
       KVMBar --reconnect            re-enable the display / force a video refresh

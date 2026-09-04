@@ -188,6 +188,10 @@ that matter:
   plugged into the monitor.
 - **Mirror parking** toggle and delay (how long after give-away to wait
   before parking; the monitor must settle on the other input first).
+- **“Switch to other input” gives the monitor away** (on by default) — the
+  away-switch runs the whole handoff → soft-disconnect → park sequence, so it
+  is one click instead of two. Turn it off to get a bare DDC input write plus
+  a separate *Give monitor away* menu item.
 
 Legacy/experimental toggles (DDC input probe, phantom watch, blind return
 probe, Dell E8 handoff) are off by default and only useful on monitors that

@@ -158,10 +158,20 @@ final class DisplayManager {
 
     // MARK: - Actions
 
-    /// Plain DDC input switch. When switching back to our own input from an
-    /// away state, also re-enables the soft-disconnected display.
+    /// DDC input switch. Switching *away* runs the full give-away sequence
+    /// (handoff → soft-disconnect → park) unless that is turned off: a bare
+    /// input write leaves the phantom display behind — and on the U2725QE it
+    /// is ACKed but ignored outright — so it always had to be followed by
+    /// "Give monitor away" by hand. Switching *back* to our own input from an
+    /// away state re-enables the soft-disconnected display.
     @discardableResult
     func switchInput(code: UInt16) -> Bool {
+        if settings.giveAwayOnSwitchToOther,
+           code == UInt16(clamping: settings.otherInputCode),
+           DDC.shared.symbolsAvailable, SkyLight.shared.available {
+            log.notice("switch to other input -> full give-away")
+            return giveAway()
+        }
         beginOwnOperation(10)
         let wasAway = state.isAway
         log.notice("switch input -> \(code)")

@@ -25,6 +25,7 @@ final class Settings {
         static let blindProbeEnabled = "blindProbeEnabled"
         static let blindProbeIntervalSec = "blindProbeIntervalSec"
         static let dellKVMHandoff = "dellKVMHandoff"
+        static let giveAwayOnSwitchToOther = "giveAwayOnSwitchToOther"
         static let usbKVMDetection = "usbKVMDetection"
         static let kvmUSBVendorID = "kvmUSBVendorID"
         static let kvmUSBProductID = "kvmUSBProductID"
@@ -55,6 +56,7 @@ final class Settings {
             Key.blindProbeEnabled: false,
             Key.blindProbeIntervalSec: 15.0,
             Key.dellKVMHandoff: true,
+            Key.giveAwayOnSwitchToOther: true,
             Key.usbKVMDetection: true,
             Key.kvmUSBVendorID: 0x25A7,   // Nordic 2.4G wireless receiver (user's KVM anchor)
             Key.kvmUSBProductID: 0xFA11,
@@ -127,6 +129,14 @@ final class Settings {
     var dellKVMHandoff: Bool {
         get { defaults.bool(forKey: Key.dellKVMHandoff) }
         set { defaults.set(newValue, forKey: Key.dellKVMHandoff) }
+    }
+    /// "Switch to the other input" runs the full give-away (handoff →
+    /// soft-disconnect → park) instead of a bare DDC write. On by default:
+    /// a bare input switch leaves the phantom display behind, so it always
+    /// had to be followed by "Give monitor away" by hand.
+    var giveAwayOnSwitchToOther: Bool {
+        get { defaults.bool(forKey: Key.giveAwayOnSwitchToOther) }
+        set { defaults.set(newValue, forKey: Key.giveAwayOnSwitchToOther) }
     }
     var usbKVMDetection: Bool {
         get { defaults.bool(forKey: Key.usbKVMDetection) }

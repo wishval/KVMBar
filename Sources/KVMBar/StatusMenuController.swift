@@ -67,14 +67,23 @@ final class StatusMenuController: NSObject, NSMenuDelegate {
         }
         menu.addItem(.separator())
 
+        // With the give-away chaining on (the default), switching away *is*
+        // the give-away, so the separate item would be a duplicate.
+        let chained = settings.giveAwayOnSwitchToOther
         addActionItem("Switch to \(settings.otherInputName) input",
-                      action: #selector(switchToOther), enabled: DDC.shared.symbolsAvailable)
+                      action: #selector(switchToOther),
+                      enabled: DDC.shared.symbolsAvailable && (!chained || SkyLight.shared.available),
+                      toolTip: chained
+                        ? "Hands the monitor and USB peripherals to \(settings.otherInputName), then soft-disconnects the phantom display (same as “Give monitor away”)."
+                        : nil)
         addActionItem("Switch to \(settings.myInputName) input",
                       action: #selector(switchToMine), enabled: DDC.shared.symbolsAvailable)
         menu.addItem(.separator())
 
-        addActionItem("Give monitor away", action: #selector(giveAway),
-                      enabled: DDC.shared.symbolsAvailable && SkyLight.shared.available)
+        if !chained {
+            addActionItem("Give monitor away", action: #selector(giveAway),
+                          enabled: DDC.shared.symbolsAvailable && SkyLight.shared.available)
+        }
         addActionItem("Disconnect display", action: #selector(disconnect),
                       enabled: SkyLight.shared.available)
         addActionItem("Reconnect display", action: #selector(reconnect),
@@ -100,10 +109,12 @@ final class StatusMenuController: NSObject, NSMenuDelegate {
     }
 
     private func addActionItem(_ title: String, action: Selector,
-                               enabled: Bool = true, checked: Bool? = nil) {
+                               enabled: Bool = true, checked: Bool? = nil,
+                               toolTip: String? = nil) {
         let item = NSMenuItem(title: title, action: action, keyEquivalent: "")
         item.target = self
         item.isEnabled = enabled
+        item.toolTip = toolTip
         if let checked {
             item.state = checked ? .on : .off
         }

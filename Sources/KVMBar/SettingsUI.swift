@@ -21,6 +21,7 @@ final class SettingsModel: ObservableObject {
     @Published var blindProbeEnabled: Bool { didSet { s.blindProbeEnabled = blindProbeEnabled; changed() } }
     @Published var blindProbeIntervalSec: Double { didSet { s.blindProbeIntervalSec = blindProbeIntervalSec; changed() } }
     @Published var dellKVMHandoff: Bool { didSet { s.dellKVMHandoff = dellKVMHandoff; changed() } }
+    @Published var giveAwayOnSwitchToOther: Bool { didSet { s.giveAwayOnSwitchToOther = giveAwayOnSwitchToOther; changed() } }
     @Published var usbKVMDetection: Bool { didSet { s.usbKVMDetection = usbKVMDetection; changed() } }
     @Published var kvmUSBVendorID: Int { didSet { s.kvmUSBVendorID = kvmUSBVendorID; changed() } }
     @Published var kvmUSBProductID: Int { didSet { s.kvmUSBProductID = kvmUSBProductID; changed() } }
@@ -44,6 +45,7 @@ final class SettingsModel: ObservableObject {
         blindProbeEnabled = s.blindProbeEnabled
         blindProbeIntervalSec = s.blindProbeIntervalSec
         dellKVMHandoff = s.dellKVMHandoff
+        giveAwayOnSwitchToOther = s.giveAwayOnSwitchToOther
         usbKVMDetection = s.usbKVMDetection
         kvmUSBVendorID = s.kvmUSBVendorID
         kvmUSBProductID = s.kvmUSBProductID
@@ -85,6 +87,8 @@ struct SettingsView: View {
                 TextField("Park delay after give-away (ms)", value: $model.parkDelayMs, format: .number)
             }
             Section("Behavior") {
+                Toggle("“Switch to other input” gives the monitor away (handoff + disconnect)",
+                       isOn: $model.giveAwayOnSwitchToOther)
                 Toggle("Notify on auto-mode actions", isOn: $model.notificationsEnabled)
                 Toggle("Force video refresh when display returns on its own", isOn: $model.forceRefreshOnAutoReturn)
                 Toggle("Auto-disconnect when monitor switches away (experimental)", isOn: $model.phantomWatch)
