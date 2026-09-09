@@ -26,6 +26,7 @@ final class Settings {
         static let blindProbeIntervalSec = "blindProbeIntervalSec"
         static let dellKVMHandoff = "dellKVMHandoff"
         static let giveAwayOnSwitchToOther = "giveAwayOnSwitchToOther"
+        static let reconnectOnSwitchToMine = "reconnectOnSwitchToMine"
         static let usbKVMDetection = "usbKVMDetection"
         static let kvmUSBVendorID = "kvmUSBVendorID"
         static let kvmUSBProductID = "kvmUSBProductID"
@@ -57,6 +58,7 @@ final class Settings {
             Key.blindProbeIntervalSec: 15.0,
             Key.dellKVMHandoff: true,
             Key.giveAwayOnSwitchToOther: true,
+            Key.reconnectOnSwitchToMine: true,
             Key.usbKVMDetection: true,
             Key.kvmUSBVendorID: 0x25A7,   // Nordic 2.4G wireless receiver (user's KVM anchor)
             Key.kvmUSBProductID: 0xFA11,
@@ -137,6 +139,15 @@ final class Settings {
     var giveAwayOnSwitchToOther: Bool {
         get { defaults.bool(forKey: Key.giveAwayOnSwitchToOther) }
         set { defaults.set(newValue, forKey: Key.giveAwayOnSwitchToOther) }
+    }
+    /// "Switch to my input" is followed by a full reconnect (unpark the
+    /// mirror / re-enable / video refresh) instead of a bare re-enable. On by
+    /// default: while away the display is normally parked as a mirror, so
+    /// after the switch the monitor came back as a duplicate of the built-in
+    /// screen and "Reconnect display" had to be clicked by hand every time.
+    var reconnectOnSwitchToMine: Bool {
+        get { defaults.bool(forKey: Key.reconnectOnSwitchToMine) }
+        set { defaults.set(newValue, forKey: Key.reconnectOnSwitchToMine) }
     }
     var usbKVMDetection: Bool {
         get { defaults.bool(forKey: Key.usbKVMDetection) }

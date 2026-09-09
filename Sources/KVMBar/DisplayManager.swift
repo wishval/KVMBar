@@ -162,8 +162,11 @@ final class DisplayManager {
     /// (handoff → soft-disconnect → park) unless that is turned off: a bare
     /// input write leaves the phantom display behind — and on the U2725QE it
     /// is ACKed but ignored outright — so it always had to be followed by
-    /// "Give monitor away" by hand. Switching *back* to our own input from an
-    /// away state re-enables the soft-disconnected display.
+    /// "Give monitor away" by hand. Switching *back* to our own input is
+    /// followed by a full reconnect unless that is turned off: while away the
+    /// display is normally parked as a mirror, so a bare re-enable is a no-op
+    /// and the monitor comes back showing a duplicate of the built-in screen —
+    /// "Reconnect display" always had to be clicked afterwards.
     @discardableResult
     func switchInput(code: UInt16) -> Bool {
         if settings.giveAwayOnSwitchToOther,
@@ -174,13 +177,24 @@ final class DisplayManager {
         }
         beginOwnOperation(10)
         let wasAway = state.isAway
+        let toMine = code == UInt16(clamping: settings.myInputCode)
         log.notice("switch input -> \(code)")
         guard DDC.shared.writeVCP(kVCPInputSelect, value: code) else {
             log.error("input switch to \(code) failed")
             return false
         }
-        if wasAway && code == UInt16(clamping: settings.myInputCode) {
-            Thread.sleep(forTimeInterval: Double(settings.settleDelayMs) / 1000)
+        guard toMine, SkyLight.shared.available else { return true }
+        // Give the monitor time to lock onto our input before touching the
+        // macOS side of it.
+        Thread.sleep(forTimeInterval: Double(settings.settleDelayMs) / 1000)
+        if settings.reconnectOnSwitchToMine {
+            // reconnect() covers every way the display can be "not quite
+            // back": parked mirror → unpark to an extended desktop, disabled
+            // → re-enable, active but black → video refresh cycle.
+            log.notice("switch to our input -> reconnect")
+            return reconnect()
+        }
+        if wasAway {
             if let id = targetID(), !activeExternalIDs().contains(id) {
                 log.notice("switched back to our input — re-enabling display \(id)")
                 SkyLight.shared.setDisplay(id, enabled: true)

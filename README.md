@@ -192,6 +192,12 @@ that matter:
   away-switch runs the whole handoff → soft-disconnect → park sequence, so it
   is one click instead of two. Turn it off to get a bare DDC input write plus
   a separate *Give monitor away* menu item.
+- **“Switch to my input” reconnects the display** (on by default) — after
+  the input switch the display is reconnected the same way *Reconnect
+  display* does it: the parked mirror is unparked to an extended desktop, a
+  disabled display is re-enabled, an active-but-black one gets a video
+  refresh. Without it the monitor usually came back as a duplicate of the
+  built-in screen and *Reconnect display* had to be clicked by hand.
 
 Legacy/experimental toggles (DDC input probe, phantom watch, blind return
 probe, Dell E8 handoff) are off by default and only useful on monitors that

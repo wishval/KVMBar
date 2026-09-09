@@ -76,8 +76,14 @@ final class StatusMenuController: NSObject, NSMenuDelegate {
                       toolTip: chained
                         ? "Hands the monitor and USB peripherals to \(settings.otherInputName), then soft-disconnects the phantom display (same as “Give monitor away”)."
                         : nil)
+        // Switching back is chained with a reconnect (the default): the
+        // parked mirror otherwise comes back as a duplicate screen.
+        let reconnectChained = settings.reconnectOnSwitchToMine && SkyLight.shared.available
         addActionItem("Switch to \(settings.myInputName) input",
-                      action: #selector(switchToMine), enabled: DDC.shared.symbolsAvailable)
+                      action: #selector(switchToMine), enabled: DDC.shared.symbolsAvailable,
+                      toolTip: reconnectChained
+                        ? "Switches the monitor to \(settings.myInputName), then reconnects the display: unparks the mirror, re-enables it or refreshes the video (same as “Reconnect display”)."
+                        : nil)
         menu.addItem(.separator())
 
         if !chained {

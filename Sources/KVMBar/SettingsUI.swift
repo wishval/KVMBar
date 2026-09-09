@@ -22,6 +22,7 @@ final class SettingsModel: ObservableObject {
     @Published var blindProbeIntervalSec: Double { didSet { s.blindProbeIntervalSec = blindProbeIntervalSec; changed() } }
     @Published var dellKVMHandoff: Bool { didSet { s.dellKVMHandoff = dellKVMHandoff; changed() } }
     @Published var giveAwayOnSwitchToOther: Bool { didSet { s.giveAwayOnSwitchToOther = giveAwayOnSwitchToOther; changed() } }
+    @Published var reconnectOnSwitchToMine: Bool { didSet { s.reconnectOnSwitchToMine = reconnectOnSwitchToMine; changed() } }
     @Published var usbKVMDetection: Bool { didSet { s.usbKVMDetection = usbKVMDetection; changed() } }
     @Published var kvmUSBVendorID: Int { didSet { s.kvmUSBVendorID = kvmUSBVendorID; changed() } }
     @Published var kvmUSBProductID: Int { didSet { s.kvmUSBProductID = kvmUSBProductID; changed() } }
@@ -46,6 +47,7 @@ final class SettingsModel: ObservableObject {
         blindProbeIntervalSec = s.blindProbeIntervalSec
         dellKVMHandoff = s.dellKVMHandoff
         giveAwayOnSwitchToOther = s.giveAwayOnSwitchToOther
+        reconnectOnSwitchToMine = s.reconnectOnSwitchToMine
         usbKVMDetection = s.usbKVMDetection
         kvmUSBVendorID = s.kvmUSBVendorID
         kvmUSBProductID = s.kvmUSBProductID
@@ -89,6 +91,8 @@ struct SettingsView: View {
             Section("Behavior") {
                 Toggle("“Switch to other input” gives the monitor away (handoff + disconnect)",
                        isOn: $model.giveAwayOnSwitchToOther)
+                Toggle("“Switch to my input” reconnects the display afterwards (unpark / re-enable / refresh)",
+                       isOn: $model.reconnectOnSwitchToMine)
                 Toggle("Notify on auto-mode actions", isOn: $model.notificationsEnabled)
                 Toggle("Force video refresh when display returns on its own", isOn: $model.forceRefreshOnAutoReturn)
                 Toggle("Auto-disconnect when monitor switches away (experimental)", isOn: $model.phantomWatch)
