@@ -529,6 +529,39 @@ final class DisplayManager {
         }
     }
 
+    // MARK: - Monitor auto brightness (DDC, VCP 0x66)
+
+    /// Current state of the monitor's ambient-light auto brightness, or nil
+    /// when the monitor does not answer (link down / DDC unavailable).
+    func readAutoBrightness() -> (on: Bool, raw: UInt16)? {
+        guard let reply = DDC.shared.readVCP(kVCPAmbientLightSensor) else { return nil }
+        return ((reply.current & 0x0F) == 0x02, reply.current)
+    }
+
+    @discardableResult
+    func setAutoBrightness(_ on: Bool) -> Bool {
+        let flags = DDC.shared.readVCP(kVCPAmbientLightSensor)?.current ?? 0
+        return writeAutoBrightness(on, flags: flags)
+    }
+
+    /// Returns the new state, or nil if the monitor could not be read/written.
+    func toggleAutoBrightness() -> Bool? {
+        guard let current = readAutoBrightness() else {
+            log.error("auto brightness toggle: monitor not reachable over DDC")
+            return nil
+        }
+        let target = !current.on
+        return writeAutoBrightness(target, flags: current.raw) ? target : nil
+    }
+
+    /// Rewrites only the MCCS nibble; the vendor flags read from the monitor
+    /// are carried over unchanged (see kVCPAmbientLightSensor).
+    private func writeAutoBrightness(_ on: Bool, flags: UInt16) -> Bool {
+        let value: UInt16 = (flags & 0xFFF0) | (on ? 0x02 : 0x01)
+        log.notice("monitor auto brightness -> \(on ? "on" : "off", privacy: .public) (VCP 0x66 := 0x\(String(value, radix: 16), privacy: .public))")
+        return DDC.shared.writeVCP(kVCPAmbientLightSensor, value: value)
+    }
+
     private func cycle(_ id: CGDirectDisplayID) {
         SkyLight.shared.setDisplay(id, enabled: false)
         Thread.sleep(forTimeInterval: Double(settings.cycleDelayMs) / 1000)

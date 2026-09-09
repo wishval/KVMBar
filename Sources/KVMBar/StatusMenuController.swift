@@ -7,6 +7,9 @@ final class StatusMenuController: NSObject, NSMenuDelegate {
     private let log = Logger(subsystem: kSubsystem, category: "menu")
     private let statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
     private let menu = NSMenu()
+    private var autoBrightnessItem: NSMenuItem?
+    /// Last state read from the monitor — shown while the fresh read is in flight.
+    private var autoBrightnessOn = false
 
     override init() {
         super.init()
@@ -96,6 +99,17 @@ final class StatusMenuController: NSObject, NSMenuDelegate {
                       enabled: SkyLight.shared.available)
         menu.addItem(.separator())
 
+        // The monitor's own ambient-light auto brightness, toggled over DDC.
+        // Its state is read on the ops queue after the menu opens: a DDC read
+        // must neither stall the main thread nor race another DDC operation.
+        autoBrightnessItem = addActionItem("Monitor auto brightness",
+                                           action: #selector(toggleAutoBrightness),
+                                           enabled: DDC.shared.symbolsAvailable,
+                                           checked: autoBrightnessOn,
+                                           toolTip: "The monitor's ambient-light sensor drives its brightness (OSD → Auto Brightness). Switched over DDC, VCP 0x66.")
+        refreshAutoBrightnessItem()
+        menu.addItem(.separator())
+
         addActionItem("Auto mode", action: #selector(toggleAutoMode), checked: settings.autoMode)
         menu.addItem(.separator())
 
@@ -114,9 +128,10 @@ final class StatusMenuController: NSObject, NSMenuDelegate {
         menu.addItem(item)
     }
 
+    @discardableResult
     private func addActionItem(_ title: String, action: Selector,
                                enabled: Bool = true, checked: Bool? = nil,
-                               toolTip: String? = nil) {
+                               toolTip: String? = nil) -> NSMenuItem {
         let item = NSMenuItem(title: title, action: action, keyEquivalent: "")
         item.target = self
         item.isEnabled = enabled
@@ -125,6 +140,27 @@ final class StatusMenuController: NSObject, NSMenuDelegate {
             item.state = checked ? .on : .off
         }
         menu.addItem(item)
+        return item
+    }
+
+    /// Updates the auto brightness item in place once the monitor answers;
+    /// greys it out when the monitor is unreachable over DDC.
+    private func refreshAutoBrightnessItem() {
+        guard DDC.shared.symbolsAvailable, let item = autoBrightnessItem else { return }
+        DisplayManager.shared.async { [weak self] in
+            let result = DisplayManager.shared.readAutoBrightness()
+            DispatchQueue.main.async {
+                guard let self, self.autoBrightnessItem === item else { return } // menu rebuilt meanwhile
+                if let result {
+                    self.autoBrightnessOn = result.on
+                    item.state = result.on ? .on : .off
+                    item.isEnabled = true
+                } else {
+                    item.isEnabled = false
+                    item.toolTip = "Monitor not reachable over DDC (link down or no external display)."
+                }
+            }
+        }
     }
 
     // MARK: - Actions
@@ -151,6 +187,13 @@ final class StatusMenuController: NSObject, NSMenuDelegate {
 
     @objc private func reconnect() {
         DisplayManager.shared.async { DisplayManager.shared.reconnect() }
+    }
+
+    @objc private func toggleAutoBrightness() {
+        DisplayManager.shared.async { [weak self] in
+            guard let on = DisplayManager.shared.toggleAutoBrightness() else { return }
+            DispatchQueue.main.async { self?.autoBrightnessOn = on }
+        }
     }
 
     @objc private func toggleAutoMode() {

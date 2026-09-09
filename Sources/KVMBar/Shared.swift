@@ -14,6 +14,13 @@ let kVCPInputSelect: UInt8 = 0x60
 /// owner. Verified live on U2725QE (standard 0x60 is ACKed but ignored there).
 let kVCPDellKVMUSB: UInt8 = 0xE8
 
+/// MCCS "Ambient light sensor" — the monitor's own auto brightness. Low
+/// nibble per spec: 0x01 = off, 0x02 = on. The U2725QE honors this one
+/// (unlike input select) but keeps vendor flags in the high nibble: it reads
+/// 0x91 with auto brightness off and 0x92 with it on, and clearing bit 0x80
+/// makes the auto level go much darker — so writes preserve the high nibble.
+let kVCPAmbientLightSensor: UInt8 = 0x66
+
 var isBundledApp: Bool {
     Bundle.main.bundleIdentifier == kBundleID && Bundle.main.bundlePath.hasSuffix(".app")
 }

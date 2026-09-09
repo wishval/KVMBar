@@ -25,6 +25,9 @@ enum CLI {
       KVMBar --give-away            switch to the other input, then soft-disconnect
       KVMBar --disconnect           soft-disconnect the external display
       KVMBar --reconnect            re-enable the display / force a video refresh
+      KVMBar --auto-brightness <v>  the monitor's own ambient-light auto
+                                    brightness (DDC VCP 0x66)
+                                    <v> = on, off or toggle
       KVMBar --help                 show this help
     """
 
@@ -48,6 +51,13 @@ enum CLI {
             dispatch(action: "disconnect")
         case "--reconnect":
             dispatch(action: "reconnect")
+        case "--auto-brightness":
+            let mode = arguments.count >= 2 ? arguments[1].lowercased() : ""
+            guard ["on", "off", "toggle"].contains(mode) else {
+                fputs("error: --auto-brightness needs on, off or toggle\n\n\(usage)\n", stderr)
+                exit(2)
+            }
+            dispatch(action: "auto-brightness", value: mode)
         default:
             fputs("error: unknown arguments: \(arguments.joined(separator: " "))\n\n\(usage)\n", stderr)
             exit(2)
@@ -104,6 +114,13 @@ enum CLI {
             return manager.softDisconnect()
         case "reconnect":
             return manager.reconnect()
+        case "auto-brightness":
+            switch value {
+            case "on": return manager.setAutoBrightness(true)
+            case "off": return manager.setAutoBrightness(false)
+            case "toggle": return manager.toggleAutoBrightness() != nil
+            default: return false
+            }
         default:
             log.error("unknown command: \(action, privacy: .public)")
             return false
@@ -152,6 +169,11 @@ enum CLI {
                 print("  Monitor input (VCP 0x60): current = \(reply.inputCode) (raw 0x\(String(reply.current, radix: 16)))")
             } else {
                 print("  Monitor input (VCP 0x60): no reply (normal when the monitor is on another input, or DDC blocked on this connection)")
+            }
+            if let auto = m.readAutoBrightness() {
+                print("  Monitor auto brightness (VCP 0x66): \(auto.on ? "on" : "off") (raw 0x\(String(auto.raw, radix: 16)))")
+            } else {
+                print("  Monitor auto brightness (VCP 0x66): no reply")
             }
         }
     }

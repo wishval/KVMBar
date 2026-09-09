@@ -82,6 +82,9 @@ flowchart TD
   MIT-licensed [m1ddc](https://github.com/waydabber/m1ddc)) — diagnostics
   (`--status` reads the monitor's registers) and input switching for monitors
   that honor it.
+- **Monitor auto brightness** toggle (menu checkmark, CLI) — the monitor's
+  own ambient-light sensor, switched over DDC (VCP `0x66`) without touching
+  the OSD.
 - Menu bar icon reflects state at a glance, optional notifications on auto
   actions, launch at login (`SMAppService`), CLI mode for Raycast hotkeys.
 
@@ -115,6 +118,7 @@ KVMBAR=/Applications/KVMBar.app/Contents/MacOS/KVMBar
 "$KVMBAR" --reconnect           # fix a black screen / re-enable / unpark
 "$KVMBAR" --disconnect          # soft-disconnect only
 "$KVMBAR" --switch-input 17     # code, configured name, "mine" or "other"
+"$KVMBAR" --auto-brightness on  # monitor's own auto brightness: on|off|toggle
 ```
 
 Raycast script command example:
@@ -174,6 +178,15 @@ Hence the flow in the diagram above: soft-disconnect + the monitor's own
 *Auto Select* (must be On in the OSD — factory default) + the USB receiver
 as the ownership signal. No DDC in the critical path, which is also why it
 works identically from the HDMI-connected Mac.
+
+One DDC feature the U2725QE *does* honor: VCP `0x66` (MCCS *Ambient light
+sensor*), i.e. the OSD's *Auto Brightness* — that is what the *Monitor auto
+brightness* menu item toggles. The low nibble follows the spec (`1` = off,
+`2` = on; writing `2` visibly hands brightness to the sensor within seconds).
+The high nibble carries undocumented Dell flags (`0x91` off / `0x92` on as
+shipped; clearing bit `0x80` makes the auto level much darker), so KVMBar
+reads the value first and rewrites only the MCCS nibble. Its capabilities
+string lists the feature as `66(00F2)`.
 
 ## Settings
 
