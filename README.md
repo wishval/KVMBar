@@ -235,6 +235,12 @@ values for VCP `60`.
 - **Clamshell.** KVMBar refuses to disable the display if it's the only
   active one (you'd end up with a headless Mac). Keep the lid open when
   giving away.
+- **Display IDs change on replug.** Replugging (or power-cycling) the
+  monitor while it is soft-disabled brings it back under a new display ID
+  that macOS keeps disabled — the link drops after ~30 s and the monitor
+  says "No signal". KVMBar remembers the monitor's EDID vendor/model/serial
+  and re-finds it under the new ID (via `SLSGetDisplayList`, which also lists
+  disabled displays), so *Reconnect display* still works.
 - **Multiple externals.** The first non-builtin display is used; a warning is
   logged.
 - Notifications and Launch at Login only work from the `.app` bundle. macOS

@@ -22,7 +22,10 @@ final class SkyLight {
 
     private typealias ConfigureDisplayEnabledF = @convention(c) (CGDisplayConfigRef?, UInt32, Bool) -> Int32
 
+    private typealias GetDisplayListF = @convention(c) (UInt32, UnsafeMutablePointer<UInt32>?, UnsafeMutablePointer<UInt32>?) -> Int32
+
     private var configureDisplayEnabled: ConfigureDisplayEnabledF?
+    private var getDisplayList: GetDisplayListF?
 
     private(set) var available = false
     private(set) var unavailableReason: String?
@@ -41,6 +44,10 @@ final class SkyLight {
             return
         }
         configureDisplayEnabled = unsafeBitCast(cfgSym, to: ConfigureDisplayEnabledF.self)
+        // Optional: only used to find a soft-disabled display under a new ID.
+        if let listSym = dlsym(handle, "SLSGetDisplayList") {
+            getDisplayList = unsafeBitCast(listSym, to: GetDisplayListF.self)
+        }
         available = true
         log.debug("SkyLight symbols resolved")
     }
@@ -73,5 +80,16 @@ final class SkyLight {
             log.error("CGCompleteDisplayConfiguration failed: \(completeErr.rawValue)")
             return false
         }
+    }
+
+    /// Every display WindowServer knows about, *including* soft-disabled ones
+    /// (which CGGetOnlineDisplayList hides). Also lists empty framebuffers;
+    /// those report vendor/model 0. Empty if the symbol is missing.
+    func allDisplayIDs() -> [UInt32] {
+        guard let getDisplayList else { return [] }
+        var ids = [UInt32](repeating: 0, count: 16)
+        var count: UInt32 = 0
+        guard getDisplayList(16, &ids, &count) == 0 else { return [] }
+        return Array(ids.prefix(Int(min(count, 16))))
     }
 }

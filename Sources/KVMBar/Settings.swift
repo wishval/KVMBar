@@ -35,6 +35,9 @@ final class Settings {
         static let ddcInputProbe = "ddcInputProbe"
         static let lastDisplayID = "lastDisplayID"
         static let lastDisplayName = "lastDisplayName"
+        static let lastDisplayVendor = "lastDisplayVendor"
+        static let lastDisplayModel = "lastDisplayModel"
+        static let lastDisplaySerial = "lastDisplaySerial"
         static let stateRaw = "stateRaw"
     }
 
@@ -183,6 +186,23 @@ final class Settings {
     var lastDisplayName: String? {
         get { defaults.string(forKey: Key.lastDisplayName) }
         set { defaults.set(newValue, forKey: Key.lastDisplayName) }
+    }
+    /// EDID identity of the external display. CGDirectDisplayIDs are not
+    /// stable across replugs, so this is how a stale lastDisplayID is
+    /// re-resolved (see DisplayManager.resolvePersistedID).
+    var lastDisplayIdentity: DisplayIdentity? {
+        get {
+            let vendor = UInt32(clamping: defaults.integer(forKey: Key.lastDisplayVendor))
+            guard vendor != 0 else { return nil }
+            return DisplayIdentity(vendor: vendor,
+                                   model: UInt32(clamping: defaults.integer(forKey: Key.lastDisplayModel)),
+                                   serial: UInt32(clamping: defaults.integer(forKey: Key.lastDisplaySerial)))
+        }
+        set {
+            defaults.set(Int(newValue?.vendor ?? 0), forKey: Key.lastDisplayVendor)
+            defaults.set(Int(newValue?.model ?? 0), forKey: Key.lastDisplayModel)
+            defaults.set(Int(newValue?.serial ?? 0), forKey: Key.lastDisplaySerial)
+        }
     }
     var stateRaw: String? {
         get { defaults.string(forKey: Key.stateRaw) }

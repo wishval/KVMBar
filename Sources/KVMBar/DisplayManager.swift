@@ -29,6 +29,26 @@ enum KVMState: String {
     }
 }
 
+/// EDID vendor/model/serial — survives the display ID changing on replug.
+/// CG still reports it for a soft-disabled display; empty framebuffers read 0.
+struct DisplayIdentity: Equatable {
+    let vendor: UInt32
+    let model: UInt32
+    let serial: UInt32
+
+    init(vendor: UInt32, model: UInt32, serial: UInt32) {
+        self.vendor = vendor
+        self.model = model
+        self.serial = serial
+    }
+
+    init?(of id: CGDirectDisplayID) {
+        let vendor = CGDisplayVendorNumber(id)
+        guard vendor != 0, vendor != 0xFFFF_FFFF else { return nil }
+        self.init(vendor: vendor, model: CGDisplayModelNumber(id), serial: CGDisplaySerialNumber(id))
+    }
+}
+
 /// Owns KVM state and all display actions. Mutating methods are synchronous
 /// (they sleep between steps) and must run on `queue` in app mode; the CLI
 /// calls them directly and exits.
@@ -104,12 +124,37 @@ final class DisplayManager {
     /// Target for SkyLight operations: the live display or the persisted ID.
     func targetID() -> CGDirectDisplayID? {
         if let id = currentExternalID() { return id }
+        return resolvePersistedID()
+    }
+
+    /// The persisted ID, corrected if it went stale. A replug or monitor power
+    /// cycle while soft-disabled brings the display back under a *new* ID that
+    /// stays disabled (WindowServer remembers the disable) and is invisible to
+    /// CG's online list — the macOS kernel then drops the idle link after ~30 s
+    /// and the monitor shows "No signal". Enabling the old ID fails with CGError
+    /// 1001, so find the display among all WindowServer displays by EDID identity.
+    private func resolvePersistedID() -> CGDirectDisplayID? {
         let persisted = settings.lastDisplayID
-        return persisted != 0 ? persisted : nil
+        guard let identity = settings.lastDisplayIdentity else {
+            return persisted != 0 ? persisted : nil
+        }
+        let known = SkyLight.shared.allDisplayIDs()
+        guard !known.isEmpty else { return persisted != 0 ? persisted : nil }
+        if known.contains(persisted), DisplayIdentity(of: persisted) == identity {
+            return persisted
+        }
+        guard let fresh = known.first(where: { CGDisplayIsBuiltin($0) == 0 && DisplayIdentity(of: $0) == identity }) else {
+            log.info("persisted display \(persisted) not found among WindowServer displays \(known)")
+            return persisted != 0 ? persisted : nil
+        }
+        log.notice("persisted display ID \(persisted) is stale — the monitor is now display \(fresh)")
+        settings.lastDisplayID = fresh
+        return fresh
     }
 
     private func remember(_ id: CGDirectDisplayID) {
         settings.lastDisplayID = id
+        if let identity = DisplayIdentity(of: id) { settings.lastDisplayIdentity = identity }
         let capture = { [settings] in
             if let name = DisplayManager.name(for: id) { settings.lastDisplayName = name }
         }
