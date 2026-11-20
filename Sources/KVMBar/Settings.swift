@@ -193,10 +193,10 @@ final class Settings {
     var lastDisplayIdentity: DisplayIdentity? {
         get {
             let vendor = UInt32(clamping: defaults.integer(forKey: Key.lastDisplayVendor))
-            guard vendor != 0 else { return nil }
-            return DisplayIdentity(vendor: vendor,
-                                   model: UInt32(clamping: defaults.integer(forKey: Key.lastDisplayModel)),
-                                   serial: UInt32(clamping: defaults.integer(forKey: Key.lastDisplaySerial)))
+            let identity = DisplayIdentity(vendor: vendor,
+                                           model: UInt32(clamping: defaults.integer(forKey: Key.lastDisplayModel)),
+                                           serial: UInt32(clamping: defaults.integer(forKey: Key.lastDisplaySerial)))
+            return identity.isPhysical ? identity : nil
         }
         set {
             defaults.set(Int(newValue?.vendor ?? 0), forKey: Key.lastDisplayVendor)

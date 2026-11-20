@@ -31,7 +31,16 @@ enum KVMState: String {
 
 /// EDID vendor/model/serial — survives the display ID changing on replug.
 /// CG still reports it for a soft-disabled display; empty framebuffers read 0.
+/// Virtual displays (AirPlay, screen sharing, Sidecar) report the
+/// placeholders 'unkn'/'virt' — those are never the KVM monitor.
 struct DisplayIdentity: Equatable {
+    static let unknownVendor: UInt32 = 0x756E_6B6E // 'unkn'
+    static let virtualModel: UInt32 = 0x7669_7274  // 'virt'
+
+    var isPhysical: Bool {
+        vendor != 0 && vendor != 0xFFFF_FFFF && vendor != Self.unknownVendor && model != Self.virtualModel
+    }
+
     let vendor: UInt32
     let model: UInt32
     let serial: UInt32
@@ -43,9 +52,8 @@ struct DisplayIdentity: Equatable {
     }
 
     init?(of id: CGDirectDisplayID) {
-        let vendor = CGDisplayVendorNumber(id)
-        guard vendor != 0, vendor != 0xFFFF_FFFF else { return nil }
-        self.init(vendor: vendor, model: CGDisplayModelNumber(id), serial: CGDisplaySerialNumber(id))
+        self.init(vendor: CGDisplayVendorNumber(id), model: CGDisplayModelNumber(id), serial: CGDisplaySerialNumber(id))
+        guard isPhysical else { return nil }
     }
 }
 
@@ -104,8 +112,13 @@ final class DisplayManager {
 
     func activeIDs() -> [CGDirectDisplayID] { displayList(CGGetActiveDisplayList) }
     func onlineIDs() -> [CGDirectDisplayID] { displayList(CGGetOnlineDisplayList) }
-    func activeExternalIDs() -> [CGDirectDisplayID] { activeIDs().filter { CGDisplayIsBuiltin($0) == 0 } }
-    func onlineExternalIDs() -> [CGDirectDisplayID] { onlineIDs().filter { CGDisplayIsBuiltin($0) == 0 } }
+    func activeExternalIDs() -> [CGDirectDisplayID] { activeIDs().filter(Self.isPhysicalExternal) }
+    func onlineExternalIDs() -> [CGDirectDisplayID] { onlineIDs().filter(Self.isPhysicalExternal) }
+
+    /// A real external monitor: not the built-in panel, not a virtual display.
+    static func isPhysicalExternal(_ id: CGDirectDisplayID) -> Bool {
+        CGDisplayIsBuiltin(id) == 0 && DisplayIdentity(of: id) != nil
+    }
 
     /// Currently visible external display, if any. Persists the ID so
     /// reconnect keeps working after the display goes offline.
@@ -135,20 +148,34 @@ final class DisplayManager {
     /// 1001, so find the display among all WindowServer displays by EDID identity.
     private func resolvePersistedID() -> CGDirectDisplayID? {
         let persisted = settings.lastDisplayID
-        guard let identity = settings.lastDisplayIdentity else {
-            return persisted != 0 ? persisted : nil
-        }
+        let fallback = persisted != 0 ? persisted : nil
         let known = SkyLight.shared.allDisplayIDs()
-        guard !known.isEmpty else { return persisted != 0 ? persisted : nil }
-        if known.contains(persisted), DisplayIdentity(of: persisted) == identity {
+        guard !known.isEmpty else { return fallback }
+        let identity = settings.lastDisplayIdentity
+        if let identity, known.contains(persisted), DisplayIdentity(of: persisted) == identity {
             return persisted
         }
-        guard let fresh = known.first(where: { CGDisplayIsBuiltin($0) == 0 && DisplayIdentity(of: $0) == identity }) else {
-            log.info("persisted display \(persisted) not found among WindowServer displays \(known)")
-            return persisted != 0 ? persisted : nil
+        let physical = known.filter(Self.isPhysicalExternal)
+        let fresh: CGDirectDisplayID?
+        if let identity, let match = physical.first(where: { DisplayIdentity(of: $0) == identity }) {
+            fresh = match
+        } else if physical.count == 1 {
+            // No usable identity (never captured, or a virtual display was
+            // remembered by mistake): the only physical external display
+            // WindowServer knows is the monitor.
+            fresh = physical[0]
+        } else {
+            fresh = nil
         }
-        log.notice("persisted display ID \(persisted) is stale — the monitor is now display \(fresh)")
+        guard let fresh else {
+            log.info("persisted display \(persisted) not found among WindowServer displays \(known)")
+            return fallback
+        }
+        if fresh != persisted {
+            log.notice("persisted display ID \(persisted) is stale — the monitor is now display \(fresh)")
+        }
         settings.lastDisplayID = fresh
+        if let id = DisplayIdentity(of: fresh) { settings.lastDisplayIdentity = id }
         return fresh
     }
 
